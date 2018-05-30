@@ -1,26 +1,27 @@
-compileJava {
-    sourceCompatibility = project.ext.sourceCompatibilityVersion
-    targetCompatibility = project.ext.targetCompatibilityVersion
-
-    // Show all warnings except boot classpath
-    configure(options) {
-        compilerArgs << "-Xlint:-options"       // Turn off "missing" bootclasspath warning
-        encoding = "utf-8"
-        incremental = true
-        fork = true
-    }
-}
-
-compileGroovy {
-    sourceCompatibility = project.ext.sourceCompatibilityVersion
-    targetCompatibility = project.ext.targetCompatibilityVersion
+tasks.withType(JavaCompile) {
+    sourceCompatibility = rootProject.ext.javaVersion
+    targetCompatibility = rootProject.ext.javaVersion
 
     // Show all warnings except boot classpath
     configure(options) {
         compilerArgs << "-Xlint:all"            // Turn on all warnings
         compilerArgs << "-Xlint:-options"       // Turn off "missing" bootclasspath warning
         compilerArgs << "-Werror"               // Turn warnings into errors
-        compilerArgs << "-Xdiags:verbose"       // Turn on verbose errors
+        encoding = "utf-8"
+        incremental = true
+        fork = true
+    }
+}
+
+tasks.withType(GroovyCompile) {
+    sourceCompatibility = rootProject.ext.javaVersion
+    targetCompatibility = rootProject.ext.javaVersion
+
+    // Show all warnings except boot classpath
+    configure(options) {
+        compilerArgs << "-Xlint:all"            // Turn on all warnings
+        compilerArgs << "-Xlint:-options"       // Turn off "missing" bootclasspath warning
+        compilerArgs << "-Werror"               // Turn warnings into errors
         encoding = "utf-8"
         incremental = true
         fork = true
@@ -32,7 +33,7 @@ compileGroovy {
     }
 }
 
-test {
+tasks.withType(Test) {
     // Turn on logging for all tests, filter to show failures/skips only
     testLogging {
         exceptionFormat "full"
@@ -41,9 +42,12 @@ test {
         showStackTraces true
         events "failed", "skipped"
     }
+
+    failFast = true
+    maxParallelForks = Runtime.runtime.availableProcessors().intdiv(2) ?: 1
 }
 
-javadoc {
+tasks.withType(Javadoc) {
     title = "${project.name} ${project.version}"
     configure(options) {
         header = project.name
@@ -55,11 +59,11 @@ javadoc {
         links("http://docs.oracle.com/javase/8/docs/api/",
             "http://docs.oracle.com/javaee/7/api/")
         exclude "**/*Test.java"
-        if (JavaVersion.current().isJava8Compatible()) addStringOption("Xdoclint:none", "-quiet")
+        if (JavaVersion.current().java8Compatible) addStringOption("Xdoclint:none", "-quiet")
     }
 }
 
-groovydoc {
+tasks.withType(Groovydoc) {
     docTitle = "${project.name} ${project.version}"
     header = project.name
     link("http://docs.oracle.com/javase/8/docs/api/",

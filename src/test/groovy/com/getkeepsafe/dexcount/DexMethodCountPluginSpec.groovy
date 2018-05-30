@@ -8,280 +8,287 @@ import spock.lang.Specification
 import spock.lang.Unroll
 
 final class DexMethodCountPluginSpec extends Specification {
-  @Rule final TemporaryFolder tempFolder = new TemporaryFolder()
-  final static COMPILE_SDK_VERSION = 25
-  final static BUILD_TOOLS_VERSION = "25.0.3"
-  final static APPLICATION_ID = "com.example"
-  final static MANIFEST_FILE_TEXT = """<?xml version="1.0" encoding="utf-8"?>
+    @Rule TemporaryFolder temporaryFolder = new TemporaryFolder()
+    def COMPILE_SDK_VERSION = 27
+    def BUILD_TOOLS_VERSION = "27.0.1"
+    def APPLICATION_ID = "com.example"
+    def MANIFEST_FILE_TEXT = """<?xml version="1.0" encoding="utf-8"?>
       <manifest package="com.getkeepsafe.dexcount.integration"
                 xmlns:android="http://schemas.android.com/apk/res/android">
           <application/>
       </manifest>
   """
 
-  Project project
-  File manifestFile
+    Project project
+    File manifestFile
 
-  def "setup"() {
-    project = ProjectBuilder.builder().build()
-    manifestFile = new File(project.projectDir, "src/main/AndroidManifest.xml")
-    manifestFile.parentFile.mkdirs()
-    manifestFile.write(MANIFEST_FILE_TEXT)
-  }
-
-  def "unsupported project project"() {
-    when:
-    new DexMethodCountPlugin().apply(project) // project.apply plugin: "com.getkeepsafe.dexcount"
-
-    then:
-    def e = thrown(IllegalArgumentException)
-    e.message == "Dexcount plugin requires the Android plugin to be configured"
-  }
-
-  @Unroll "#projectPlugin project"() {
-    given:
-    project.apply plugin: projectPlugin
-
-    when:
-    project.apply plugin: "com.getkeepsafe.dexcount"
-
-    then:
-    noExceptionThrown()
-
-    where:
-    projectPlugin << ["com.android.application", "com.android.library", "com.android.test"]
-  }
-
-  def "android - all tasks created"() {
-    given:
-    project.apply plugin: "com.android.application"
-    project.apply plugin: "com.getkeepsafe.dexcount"
-    project.android {
-      compileSdkVersion COMPILE_SDK_VERSION
-      buildToolsVersion BUILD_TOOLS_VERSION
-
-      defaultConfig {
-        applicationId APPLICATION_ID
-      }
+    def "setup"() {
+        project = ProjectBuilder.builder().build()
+        manifestFile = new File(project.projectDir, "src/main/AndroidManifest.xml")
+        manifestFile.parentFile.mkdirs()
+        manifestFile.write(MANIFEST_FILE_TEXT)
     }
 
-    when:
-    project.evaluate()
+    def "unsupported project project"() {
+        when:
+        new DexMethodCountPlugin().apply(project)
 
-    then:
-    project.tasks.getByName("countDebugDexMethods")
-    project.tasks.getByName("countReleaseDexMethods")
-  }
-
-  def "android [buildTypes] - all tasks created"() {
-    given:
-    project.apply plugin: "com.android.application"
-    project.apply plugin: "com.getkeepsafe.dexcount"
-    project.android {
-      compileSdkVersion COMPILE_SDK_VERSION
-      buildToolsVersion BUILD_TOOLS_VERSION
-
-      defaultConfig {
-        applicationId APPLICATION_ID
-      }
-
-      buildTypes {
-        debug {}
-        release {}
-      }
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message == "Dexcount plugin requires the Android plugin to be configured"
     }
 
-    when:
-    project.evaluate()
+    @Unroll "#projectPlugin project"() {
+        given:
+        project.apply plugin: projectPlugin
 
-    then:
-    project.tasks.getByName("countDebugDexMethods")
-    project.tasks.getByName("countReleaseDexMethods")
-  }
+        when:
+        project.apply plugin: "com.getkeepsafe.dexcount"
 
-  def "android [buildTypes + productFlavors] - all tasks created"() {
-    given:
-    project.apply plugin: "com.android.application"
-    project.apply plugin: "com.getkeepsafe.dexcount"
-    project.android {
-      compileSdkVersion COMPILE_SDK_VERSION
-      buildToolsVersion BUILD_TOOLS_VERSION
+        then:
+        noExceptionThrown()
 
-      defaultConfig {
-        applicationId APPLICATION_ID
-      }
-
-      buildTypes {
-        debug {}
-        release {}
-      }
-
-      flavorDimensions "flav"
-
-      productFlavors {
-        flavor1 { dimension "flav" }
-        flavor2 { dimension "flav" }
-      }
+        where:
+        projectPlugin << ["com.android.application", "com.android.library", "com.android.test"]
     }
 
-    when:
-    project.evaluate()
+    def "android - all tasks created"() {
+        given:
+        project.apply plugin: "com.android.application"
+        project.apply plugin: "com.getkeepsafe.dexcount"
+        project.android {
+            compileSdkVersion COMPILE_SDK_VERSION
+            buildToolsVersion BUILD_TOOLS_VERSION
 
-    then:
-    project.tasks.getByName("countFlavor1DebugDexMethods")
-    project.tasks.getByName("countFlavor1ReleaseDexMethods")
-    project.tasks.getByName("countFlavor2DebugDexMethods")
-    project.tasks.getByName("countFlavor2ReleaseDexMethods")
-  }
+            defaultConfig {
+                applicationId APPLICATION_ID
+            }
+        }
 
-  def "android [buildTypes + productFlavors + flavorDimensions] - all tasks created"() {
-    given:
-    project.apply plugin: "com.android.application"
-    project.apply plugin: "com.getkeepsafe.dexcount"
-    project.android {
-      compileSdkVersion COMPILE_SDK_VERSION
-      buildToolsVersion BUILD_TOOLS_VERSION
+        when:
+        project.evaluate()
 
-      defaultConfig {
-        applicationId APPLICATION_ID
-      }
-
-      buildTypes {
-        debug {}
-        release {}
-      }
-
-      flavorDimensions "a", "b"
-
-      productFlavors {
-        flavor1 { dimension "a" }
-        flavor2 { dimension "a" }
-        flavor3 { dimension "b" }
-        flavor4 { dimension "b" }
-      }
+        then:
+        project.tasks.getByName("countDebugDexMethods")
+        project.tasks.getByName("countReleaseDexMethods")
     }
 
-    when:
-    project.evaluate()
+    def "android [buildTypes] - all tasks created"() {
+        given:
+        project.apply plugin: "com.android.application"
+        project.apply plugin: "com.getkeepsafe.dexcount"
+        project.android {
+            compileSdkVersion COMPILE_SDK_VERSION
+            buildToolsVersion BUILD_TOOLS_VERSION
 
-    then:
-    project.tasks.getByName("countFlavor1Flavor3DebugDexMethods")
-    project.tasks.getByName("countFlavor1Flavor3ReleaseDexMethods")
-    project.tasks.getByName("countFlavor2Flavor4DebugDexMethods")
-    project.tasks.getByName("countFlavor2Flavor4ReleaseDexMethods")
-  }
+            defaultConfig {
+                applicationId APPLICATION_ID
+            }
 
-  def "android apk report example"() {
-    given:
-    def apkFile = tempFolder.newFile("tiniest-smallest-app.apk")
-    def apkResource = getClass().getResourceAsStream("/tiniest-smallest-app.apk")
-    apkResource.withStream { input ->
-        apkFile.append(input)
+            buildTypes {
+                debug {}
+                release {}
+            }
+        }
+
+        when:
+        project.evaluate()
+
+        then:
+        project.tasks.getByName("countDebugDexMethods")
+        project.tasks.getByName("countReleaseDexMethods")
     }
 
-    project.apply plugin: "com.android.application"
-    project.apply plugin: "com.getkeepsafe.dexcount"
-    project.android {
-      compileSdkVersion COMPILE_SDK_VERSION
-      buildToolsVersion BUILD_TOOLS_VERSION
+    def "android [buildTypes + productFlavors] - all tasks created"() {
+        given:
+        project.apply plugin: "com.android.application"
+        project.apply plugin: "com.getkeepsafe.dexcount"
+        project.android {
+            compileSdkVersion COMPILE_SDK_VERSION
+            buildToolsVersion BUILD_TOOLS_VERSION
 
-      defaultConfig {
-        applicationId APPLICATION_ID
-      }
+            defaultConfig {
+                applicationId APPLICATION_ID
+            }
+
+            buildTypes {
+                debug {}
+                release {}
+            }
+
+            flavorDimensions "flav"
+
+            productFlavors {
+                flavor1 { dimension "flav" }
+                flavor2 { dimension "flav" }
+            }
+        }
+
+        when:
+        project.evaluate()
+
+        then:
+        project.tasks.getByName("countFlavor1DebugDexMethods")
+        project.tasks.getByName("countFlavor1ReleaseDexMethods")
+        project.tasks.getByName("countFlavor2DebugDexMethods")
+        project.tasks.getByName("countFlavor2ReleaseDexMethods")
     }
 
-    when:
-    project.evaluate()
+    def "android [buildTypes + productFlavors + flavorDimensions] - all tasks created"() {
+        given:
+        project.apply plugin: "com.android.application"
+        project.apply plugin: "com.getkeepsafe.dexcount"
+        project.android {
+            compileSdkVersion COMPILE_SDK_VERSION
+            buildToolsVersion BUILD_TOOLS_VERSION
 
-    // Override APK file
-    DexMethodCountTaskBase task = project.tasks.getByName("countDebugDexMethods") as DexMethodCountTaskBase
-    task.variantOutputName = "pluginSpec"
-    task.inputDirectory = apkFile.parentFile
-    task.execute()
+            defaultConfig {
+                applicationId APPLICATION_ID
+            }
 
-    then:
-    // debug.csv - CSV
-    def actualOutputFile = task.outputFile.absoluteFile.text
-    def expectedOutputFile = "methods  fields   package/class name\n" +
-            "6        0        android\n" +
-            "2        0        android.app\n" +
-            "4        0        android.widget\n" +
-            "3        0        b\n" +
-            "3        0        b.a\n"
-    // debug.txt - TXT
-    def actualSummaryFile = task.summaryFile.absoluteFile.text
-    def expectedSummaryFile = "methods,fields,classes\n" +
-            "9,0,4\n"
-    // debugChart/data.js - JSON
-    def actualChartDir = new File(task.chartDir, "data.js").text
-    def expectedChartDir = "var data = {\n" +
-            "  \"name\": \"\",\n" +
-            "  \"methods\": 9,\n" +
-            "  \"fields\": 0,\n" +
-            "  \"children\": [\n" +
-            "    {\n" +
-            "      \"name\": \"android\",\n" +
-            "      \"methods\": 6,\n" +
-            "      \"fields\": 0,\n" +
-            "      \"children\": [\n" +
-            "        {\n" +
-            "          \"name\": \"app\",\n" +
-            "          \"methods\": 2,\n" +
-            "          \"fields\": 0,\n" +
-            "          \"children\": [\n" +
-            "            {\n" +
-            "              \"name\": \"Activity\",\n" +
-            "              \"methods\": 2,\n" +
-            "              \"fields\": 0,\n" +
-            "              \"children\": []\n" +
-            "            }\n" +
-            "          ]\n" +
-            "        },\n" +
-            "        {\n" +
-            "          \"name\": \"widget\",\n" +
-            "          \"methods\": 4,\n" +
-            "          \"fields\": 0,\n" +
-            "          \"children\": [\n" +
-            "            {\n" +
-            "              \"name\": \"RelativeLayout\",\n" +
-            "              \"methods\": 2,\n" +
-            "              \"fields\": 0,\n" +
-            "              \"children\": []\n" +
-            "            },\n" +
-            "            {\n" +
-            "              \"name\": \"TextView\",\n" +
-            "              \"methods\": 2,\n" +
-            "              \"fields\": 0,\n" +
-            "              \"children\": []\n" +
-            "            }\n" +
-            "          ]\n" +
-            "        }\n" +
-            "      ]\n" +
-            "    },\n" +
-            "    {\n" +
-            "      \"name\": \"b\",\n" +
-            "      \"methods\": 3,\n" +
-            "      \"fields\": 0,\n" +
-            "      \"children\": [\n" +
-            "        {\n" +
-            "          \"name\": \"a\",\n" +
-            "          \"methods\": 3,\n" +
-            "          \"fields\": 0,\n" +
-            "          \"children\": [\n" +
-            "            {\n" +
-            "              \"name\": \"M\",\n" +
-            "              \"methods\": 3,\n" +
-            "              \"fields\": 0,\n" +
-            "              \"children\": []\n" +
-            "            }\n" +
-            "          ]\n" +
-            "        }\n" +
-            "      ]\n" +
-            "    }\n" +
-            "  ]\n" +
-            "}"
-    actualOutputFile == expectedOutputFile
-    actualSummaryFile == expectedSummaryFile
-    actualChartDir == expectedChartDir
-  }
+            buildTypes {
+                debug {}
+                release {}
+            }
+
+            flavorDimensions "a", "b"
+
+            productFlavors {
+                flavor1 { dimension "a" }
+                flavor2 { dimension "a" }
+                flavor3 { dimension "b" }
+                flavor4 { dimension "b" }
+            }
+        }
+
+        when:
+        project.evaluate()
+
+        then:
+        project.tasks.getByName("countFlavor1Flavor3DebugDexMethods")
+        project.tasks.getByName("countFlavor1Flavor3ReleaseDexMethods")
+        project.tasks.getByName("countFlavor2Flavor4DebugDexMethods")
+        project.tasks.getByName("countFlavor2Flavor4ReleaseDexMethods")
+    }
+
+    def "android apk report example"() {
+        given:
+        def apkFile = temporaryFolder.newFile("tiniest-smallest-app.apk")
+        def apkResource = getClass().getResourceAsStream("/tiniest-smallest-app.apk")
+        apkResource.withStream { input ->
+            apkFile.append(input)
+        }
+
+        project.apply plugin: "com.android.application"
+        project.apply plugin: "com.getkeepsafe.dexcount"
+        project.android {
+            compileSdkVersion COMPILE_SDK_VERSION
+            buildToolsVersion BUILD_TOOLS_VERSION
+
+            defaultConfig {
+                applicationId APPLICATION_ID
+            }
+        }
+
+        when:
+        project.evaluate()
+
+        // Override APK file
+        DexMethodCountTaskBase task = project.tasks.getByName("countDebugDexMethods") as DexMethodCountTaskBase
+        task.variantOutputName = "pluginSpec"
+        task.inputFileProvider = {apkFile}
+        task.execute()
+
+        then:
+        // debug.csv - CSV
+        def actualOutputFile = task.outputFile.absoluteFile.text.stripIndent().trim()
+        def expectedOutputFile = """
+            methods  fields   package/class name
+            6        0        android
+            2        0        android.app
+            4        0        android.widget
+            3        0        b
+            3        0        b.a""".stripIndent().trim()
+
+        // debug.txt - TXT
+        def actualSummaryFile = task.summaryFile.absoluteFile.text.stripIndent().trim()
+        def expectedSummaryFile = """
+            methods,fields,classes
+            9,0,4
+            """.stripIndent().trim()
+
+        // debugChart/data.js - JSON
+        def actualChartDir = new File(task.chartDir, "data.js").text.stripIndent().trim()
+        def expectedChartDir = """
+            var data = {
+              "name": "",
+              "methods": 9,
+              "fields": 0,
+              "children": [
+                {
+                  "name": "android",
+                  "methods": 6,
+                  "fields": 0,
+                  "children": [
+                    {
+                      "name": "app",
+                      "methods": 2,
+                      "fields": 0,
+                      "children": [
+                        {
+                          "name": "Activity",
+                          "methods": 2,
+                          "fields": 0,
+                          "children": []
+                        }
+                      ]
+                    },
+                    {
+                      "name": "widget",
+                      "methods": 4,
+                      "fields": 0,
+                      "children": [
+                        {
+                          "name": "RelativeLayout",
+                          "methods": 2,
+                          "fields": 0,
+                          "children": []
+                        },
+                        {
+                          "name": "TextView",
+                          "methods": 2,
+                          "fields": 0,
+                          "children": []
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "b",
+                  "methods": 3,
+                  "fields": 0,
+                  "children": [
+                    {
+                      "name": "a",
+                      "methods": 3,
+                      "fields": 0,
+                      "children": [
+                        {
+                          "name": "M",
+                          "methods": 3,
+                          "fields": 0,
+                          "children": []
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }""".stripIndent().trim()
+
+        actualOutputFile == expectedOutputFile
+        actualSummaryFile == expectedSummaryFile
+        actualChartDir == expectedChartDir
+    }
 }
